@@ -1,0 +1,54 @@
+import openai
+import pyttsx3
+import speech_recognition as sr
+
+def elegir_voz(engine, opcion):
+    voces = engine.getProperty('voices')
+    if opcion == "1":
+        engine.setProperty('voice', voces[0].id)  # Voz de niño (según el sistema)
+    elif opcion == "2":
+        engine.setProperty('voice', voces[1].id)  # Voz masculina
+    elif opcion == "3":
+        engine.setProperty('voice', voces[2].id)  # Voz femenina
+
+def escuchar_pregunta():
+    recognizer = sr.Recognizer()
+    with sr.Microphone() as source:
+        print("Dime tu pregunta:")
+        recognizer.adjust_for_ambient_noise(source)
+        audio = recognizer.listen(source)
+    try:
+        return recognizer.recognize_google(audio, language='es-ES')
+    except sr.UnknownValueError:
+        return "No entendí la pregunta."
+    except sr.RequestError:
+        return "Error en la conexión."
+
+def responder_pregunta(pregunta):
+    openai.api_key = "TU_CLAVE_OPENAI"
+    respuesta = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": pregunta}]
+    )
+    return respuesta["choices"][0]["message"]["content"]
+
+def hablar(respuesta, engine):
+    engine.say(respuesta)
+    engine.runAndWait()
+
+if __name__ == "__main__":
+    engine = pyttsx3.init()
+    print("Elige la voz: 1) Niño, 2) Masculino, 3) Femenino")
+    voz = input("Selecciona 1, 2 o 3: ")
+    elegir_voz(engine, voz)
+    
+    while True:
+        pregunta = escuchar_pregunta()
+        if pregunta.lower() in ["salir", "adiós"]:
+            print("Hasta luego!")
+            hablar("Hasta luego!", engine)
+            break
+        
+        respuesta = responder_pregunta(pregunta)
+        print("Cha Cha Chapate:", respuesta)
+        hablar(respuesta, engine)
